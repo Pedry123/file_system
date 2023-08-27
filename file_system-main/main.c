@@ -12,17 +12,17 @@ typedef struct nodo {
     struct nodo *prox;
 } Nodo;
 
+typedef struct lista {
+    Nodo *primeiro;
+} Lista;
+
 typedef struct listaVertical {
     Nodo *atual;
     Nodo *pai;
     Nodo *filho;
 } ListaVertical;
 
-typedef struct lista {
-    Nodo *atual;
-    Nodo *prox;
-    Nodo *ant;
-} Lista;
+
 
 void copiarStr(char dest[], char orig[], int ini, int fim){
     int i=0, tam=strlen(orig);
@@ -42,19 +42,14 @@ Nodo* criarNodo(char nome[], int tipo){
     return novo;
 }
 
-Nodo* inserirNodo(Nodo *pai, char nome[], int tipo){
+Nodo* inserirNodo(Nodo *nodo, char nome[], int tipo){
     Nodo *novo = criarNodo(nome, tipo);
-    novo->ant = pai;
-    if(pai->prox == NULL){
-        pai->prox = novo;
-    }else{
-        Nodo *aux = pai->prox;
-        while(aux->prox != NULL){
-            aux = aux->prox;
-        }
-        aux->prox = novo;
-        novo->ant = aux;
+    Nodo *aux = nodo;
+    while(aux->prox != NULL){
+        aux = aux->prox;
     }
+    aux->prox = novo;
+    novo->ant = aux;
     return novo;
 }
 
@@ -84,7 +79,11 @@ Nodo* buscarNodo(Nodo *nodo, char nome[]){
 void listarNodos(Nodo *nodo){
     Nodo *aux = nodo;
     while(aux != NULL){
-        printf("%s\n",aux->nome);
+        if (aux->tipo == PASTA) {
+            printf("%s-\n",aux->nome);
+        } else {
+            printf("%s\n",aux->nome);
+        }
         aux = aux->prox;
     }
 }
@@ -99,20 +98,56 @@ ListaVertical* criarListaVertical(Nodo* nodo){
 
 Lista* criarLista(){
     Lista *lista = (Lista*) malloc(sizeof(Lista));
-    lista->atual = NULL;
-    lista->prox = NULL;
-    lista->ant = NULL;
+    lista->primeiro = NULL;
     return lista;
 }
 
-Lista* removerLista(Lista *lista){
-    Nodo *aux = lista->atual;
-    while(aux != NULL){
-        aux = aux->prox;
-        free(aux->ant);
+void inserirNodoNaLista(Lista *lista, char nome[], int tipo){
+    Nodo *novo = criarNodo(nome, tipo);
+    if (lista->primeiro == NULL) {
+        lista->primeiro = novo;
+    } else {
+        Nodo *aux = lista->primeiro;
+        while (aux->prox != NULL) {
+            aux = aux->prox;
+        }
+        aux->prox = novo;
+        novo->ant = aux;
+    }
+}
+
+void deletarNodoDaLista(Lista *lista, Nodo *nodo) {
+    if (nodo->ant != NULL) {
+        nodo->ant->prox = nodo->prox;
+    }
+    if (nodo->prox != NULL) {
+        nodo->prox->ant = nodo->ant;
+    }
+    if (nodo == lista->primeiro) {
+        lista->primeiro = nodo->prox;
+    }
+    free(nodo);
+}
+
+Lista* removerLista(Lista *lista) {
+    Nodo *aux = lista->primeiro;
+    while (aux != NULL) {
+        Nodo *aux2 = aux->prox;
+        free(aux);
+        aux = aux2;
     }
     free(lista);
     return NULL;
+}
+
+void liberarLista(Lista *lista) {
+    Nodo *nodoAtual = lista->primeiro;
+    while (nodoAtual != NULL) {
+        Nodo *proximo = nodoAtual->prox;
+        free(nodoAtual);
+        nodoAtual = proximo;
+    }
+    free(lista);
 }
 
 void mostrarCaminho(Nodo* nodo) {
@@ -121,8 +156,9 @@ void mostrarCaminho(Nodo* nodo) {
 
 int main(){
     char str[14],cmd[3], par[11];
-    Nodo* raiz = criarNodo("", PASTA);
-    ListaVertical* listaVertical = criarListaVertical(raiz);
+    Nodo *raiz = criarNodo("", PASTA);
+    ListaVertical *listaVertical = criarListaVertical(raiz);
+    Lista* lista = criarLista();
     do{
         mostrarCaminho(raiz);
         fflush(stdin);
@@ -130,11 +166,12 @@ int main(){
         copiarStr(cmd, str, 0, 2);
         copiarStr(par, str, 3, 13);
         printf("str: %s\ncmd: %s\npar: %s\n\n", str, cmd, par);
-        if (strcmp(cmd, "ma")==0) {
-            Nodo* arquivo = criarNodo(par, ARQUIVO);
-            listaVertical->filho = inserirNodo(arquivo, par, ARQUIVO);
-            printf("arquivo: %s\n", arquivo->nome);
-            printf("listaVertical->filho: %s\n", listaVertical->filho->nome);
+        if (strcmp(cmd, "ma")== 0) {
+            inserirNodoNaLista(lista, par, ARQUIVO);
+        } else if (strcmp(cmd, "mp")== 0) {
+            inserirNodoNaLista(lista, par, PASTA);
+        } else if (strcmp(cmd, "ls") == 0) {
+            listarNodos(lista->primeiro);
         }
             
         /*
@@ -147,5 +184,6 @@ int main(){
         printf("raiz: %s\n",raiz->nome);
         */
     } while(strcmp(cmd,"ex")!=0);
+    liberarLista(lista);
     return 0;
 }
