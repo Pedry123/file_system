@@ -16,13 +16,12 @@ typedef struct lista {
     Nodo *primeiro;
 } Lista;
 
-typedef struct listaVertical {
-    Nodo *atual;
-    Nodo *pai;
-    Nodo *filho;
-} ListaVertical;
-
-
+typedef struct nodoVertical {
+    Nodo* pasta;
+    Lista* lista;
+    struct nodoVertical* ant;
+    struct nodoVertical* prox;
+} NodoVertical;
 
 void copiarStr(char dest[], char orig[], int ini, int fim){
     int i=0, tam=strlen(orig);
@@ -76,6 +75,16 @@ Nodo* buscarNodo(Nodo *nodo, char nome[]){
     return NULL;
 }
 
+Nodo* liberarNodo(Nodo *nodo){
+    Nodo *aux = nodo;
+    while(aux != NULL){
+        Nodo *aux2 = aux->prox;
+        free(aux);
+        aux = aux2;
+    }
+    return NULL;
+}
+
 void listarNodos(Nodo *nodo){
     Nodo *aux = nodo;
     while(aux != NULL){
@@ -86,14 +95,6 @@ void listarNodos(Nodo *nodo){
         }
         aux = aux->prox;
     }
-}
-
-ListaVertical* criarListaVertical(Nodo* nodo){
-    ListaVertical *lista = (ListaVertical*) malloc(sizeof(ListaVertical));
-    lista->atual = nodo;
-    lista->pai = NULL;
-    lista->filho = NULL;
-    return lista;
 }
 
 Lista* criarLista(){
@@ -150,15 +151,80 @@ void liberarLista(Lista *lista) {
     free(lista);
 }
 
+NodoVertical* criarNodoVertical(Nodo* pasta) {
+    NodoVertical* novo = (NodoVertical*) malloc(sizeof(NodoVertical));
+    novo->pasta = pasta;
+    novo->lista = criarLista();
+    novo->ant = NULL;
+    novo->prox = NULL;
+    return novo;
+}
+
+NodoVertical* inserirNodoVertical(NodoVertical* nodoVertical, Nodo* pasta) {
+    NodoVertical* novo = criarNodoVertical(pasta);
+    NodoVertical* aux = nodoVertical;
+    while (aux->prox != NULL) {
+        aux = aux->prox;
+    }
+    aux->prox = novo;
+    novo->ant = aux;
+    return novo;
+}
+
+NodoVertical* deletarNodoVertical(NodoVertical* nodoVertical) {
+    NodoVertical* aux = nodoVertical->ant;
+    if (aux != NULL) {
+        aux->prox = nodoVertical->prox;
+    }
+    if (nodoVertical->prox != NULL) {
+        nodoVertical->prox->ant = aux;
+    }
+    free(nodoVertical);
+    return aux;
+}
+
+NodoVertical* buscarNodoVertical(NodoVertical* nodoVertical, Nodo* pasta) {
+    NodoVertical* aux = nodoVertical;
+    while (aux != NULL) {
+        if (aux->pasta == pasta) {
+            return aux;
+        }
+        aux = aux->prox;
+    }
+    return NULL;
+}
+
+NodoVertical* liberarNodoVertical(NodoVertical* nodoVertical) {
+    liberarNodo(nodoVertical->pasta);
+    liberarLista(nodoVertical->lista);
+    NodoVertical* aux = nodoVertical;
+    while (aux != NULL) {
+        NodoVertical* aux2 = aux->prox;
+        free(aux);
+        aux = aux2;
+    }
+    return NULL;
+}
+
+void listarNodosVerticais(NodoVertical* nodoVertical) {
+    NodoVertical* aux = nodoVertical;
+    while (aux != NULL) {
+        printf("%s\n", aux->pasta->nome);
+        listarNodos(aux->lista->primeiro);
+        aux = aux->prox;
+    }
+}
+
 void mostrarCaminho(Nodo* nodo) {
     printf("->%s\n", nodo->nome);
 }
 
 int main(){
     char str[14],cmd[3], par[11];
-    Nodo *raiz = criarNodo("", PASTA);
-    ListaVertical *listaVertical = criarListaVertical(raiz);
-    Lista* lista = criarLista();
+    Nodo *raiz = criarNodo("raizls", PASTA);
+    NodoVertical *nodoVertical = criarNodoVertical(raiz);
+    nodoVertical->lista = criarLista();
+    NodoVertical *atual = nodoVertical;
     do{
         mostrarCaminho(raiz);
         fflush(stdin);
@@ -167,13 +233,20 @@ int main(){
         copiarStr(par, str, 3, 13);
         printf("str: %s\ncmd: %s\npar: %s\n\n", str, cmd, par);
         if (strcmp(cmd, "ma")== 0) {
-            inserirNodoNaLista(lista, par, ARQUIVO);
+            inserirNodoNaLista(atual->lista, par, ARQUIVO);
         } else if (strcmp(cmd, "mp")== 0) {
-            inserirNodoNaLista(lista, par, PASTA);
+            inserirNodoNaLista(atual->lista, par, PASTA);
         } else if (strcmp(cmd, "ls") == 0) {
-            listarNodos(lista->primeiro);
+            listarNodos(atual->lista->primeiro);
+        } else if (strcmp(cmd, "cd")== 0) {
+            Nodo* nodo = buscarNodo(atual->lista->primeiro, par);
+            if (nodo != NULL) {
+                atual = inserirNodoVertical(atual, nodo);
+            } else {
+                printf("Nodo nao encontrado\n");
+            }
         }
-            
+        printf("%s", atual->pasta->nome);    
         /*
         Nodo* nodo = raiz;
         nodo = inserirNodo(nodo, "pasta1", 0);
@@ -183,7 +256,7 @@ int main(){
         printf("nodo: %s\n",nodo->nome);
         printf("raiz: %s\n",raiz->nome);
         */
-    } while(strcmp(cmd,"ex")!=0);
-    liberarLista(lista);
+    } while(strcmp(cmd,"ex")!= 0);
+    liberarNodoVertical(nodoVertical);
     return 0;
 }
