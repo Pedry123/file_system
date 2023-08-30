@@ -79,6 +79,7 @@ Nodo* liberarNodo(Nodo *nodo){
     Nodo *aux = nodo;
     while(aux != NULL){
         Nodo *aux2 = aux->prox;
+        memset(aux->nome, 0, sizeof(aux->nome));
         free(aux);
         aux = aux2;
     }
@@ -127,7 +128,6 @@ void deletarNodoDaLista(Lista *lista, Nodo *nodo) {
     if (nodo == lista->primeiro) {
         lista->primeiro = nodo->prox;
     }
-    free(nodo);
 }
 
 Lista* deletarLista(Lista *lista) {
@@ -163,6 +163,12 @@ NodoVertical* criarNodoVertical(Nodo* pasta) {
 NodoVertical* inserirNodoVertical(NodoVertical* nodoVertical, Nodo* pasta) {
     NodoVertical* novo = criarNodoVertical(pasta);
     NodoVertical* aux = nodoVertical;
+    
+    // Verificar se nodoVertical é NULL (primeira inserção)
+    if (nodoVertical == NULL) {
+        return novo;
+    }
+
     while (aux->prox != NULL) {
         aux = aux->prox;
     }
@@ -172,28 +178,24 @@ NodoVertical* inserirNodoVertical(NodoVertical* nodoVertical, Nodo* pasta) {
 }
 
 NodoVertical* deletarNodoVertical(NodoVertical* nodoVertical) {
-    // primeiro, ir até o último nodo vertical
+    while (nodoVertical->prox != NULL) {
+        nodoVertical = nodoVertical->prox;
+    }
+    
     NodoVertical* aux = nodoVertical;
-    while (aux->prox != NULL) {
-        aux = aux->prox;
-    }
-    // depois, deletar o último nodo vertical e retornar o anterior
-    while (aux != nodoVertical) {
+    
+    while (aux != NULL) {
         NodoVertical* aux2 = aux->ant;
-        deletarLista(aux->lista);
-        deletarNodo(aux->pasta);
-        NodoVertical* temp = aux;
+        if (aux->pasta != NULL) {
+            deletarLista(aux->lista);
+            deletarNodo(aux->pasta);
+        }
+        free(aux);
         aux = aux2;
-        free(temp);
     }
-    if (aux->pasta != NULL) {
-        deletarLista(aux->lista);
-        deletarNodo(aux->pasta);
-    }
-    free(aux); // Liberar o nodo vertical raiz
+    
     return NULL;
 }
-
 
 NodoVertical* buscarNodoVertical(NodoVertical* nodoVertical, Nodo* pasta) {
     NodoVertical* aux = nodoVertical;
@@ -203,19 +205,20 @@ NodoVertical* buscarNodoVertical(NodoVertical* nodoVertical, Nodo* pasta) {
         }
         aux = aux->prox;
     }
-    return NULL;
+    return aux;
 }
 
-NodoVertical* liberarNodoVertical(NodoVertical* nodoVertical) {
-    liberarNodo(nodoVertical->pasta);
-    liberarLista(nodoVertical->lista);
+void liberarNodoVertical(NodoVertical* nodoVertical) {
     NodoVertical* aux = nodoVertical;
     while (aux != NULL) {
-        NodoVertical* aux2 = aux->prox;
+        NodoVertical* proximo = aux->prox;
+        if (aux->pasta != NULL) {
+            liberarNodo(aux->pasta);
+            liberarLista(aux->lista);
+        }
         free(aux);
-        aux = aux2;
+        aux = proximo;
     }
-    return NULL;
 }
 
 void listarNodosVerticais(NodoVertical* nodoVertical) {
@@ -233,15 +236,16 @@ void mostrarCaminho(Nodo* nodo) {
 
 int main(){
     char str[14],cmd[3], par[11];
-    Nodo *raiz = criarNodo("raizls", PASTA);
+    Nodo *raiz = criarNodo("raiz", PASTA);
     NodoVertical *nodoVertical = criarNodoVertical(raiz);
     nodoVertical->lista = criarLista();
     NodoVertical *atual = nodoVertical;
     do{
-        mostrarCaminho(raiz);
+        mostrarCaminho(atual->pasta);
         printf("Pasta atual: %s\n", atual->pasta->nome); 
         fflush(stdin);
-        gets(str);
+        fgets(str, sizeof(str), stdin); 
+        str[strcspn(str, "\n")] = '\0'; 
         copiarStr(cmd, str, 0, 2);
         copiarStr(par, str, 3, 13);
         //printf("str: %s\ncmd: %s\npar: %s\n\n", str, cmd, par);
@@ -262,7 +266,10 @@ int main(){
             }
             Nodo *nodo = buscarNodo(atual->lista->primeiro, par);
             if (nodo != NULL) {
-                atual = inserirNodoVertical(atual, nodo);
+                NodoVertical* novoNodoVertical = inserirNodoVertical(atual, nodo);
+                if (novoNodoVertical != NULL) {
+                    atual = novoNodoVertical;
+                }
             } else {
                 printf("Nodo nao encontrado\n");
             }
@@ -270,19 +277,16 @@ int main(){
             Nodo *nodoRemover = buscarNodo(atual->lista->primeiro, par);
             if (nodoRemover != NULL) {
                 if (nodoRemover->tipo == PASTA) {
-            // Remover pasta (e seu conteúdo)
                     NodoVertical* nodoVerticalRemover = buscarNodoVertical(nodoVertical, nodoRemover);
                     if (nodoVerticalRemover != NULL) {
-                        atual = nodoVerticalRemover->ant;
-                        nodoVerticalRemover = deletarNodoVertical(nodoVerticalRemover);
-                        liberarNodoVertical(nodoVerticalRemover);
-                    } else {
-                        printf("Erro ao encontrar nodo vertical correspondente à pasta.\n");
+                        nodoVertical = deletarNodoVertical(nodoVerticalRemover);
                     }
+                    deletarNodoDaLista(atual->lista, nodoRemover);
+                    liberarNodo(nodoRemover);
                 } else {
                     deletarNodoDaLista(atual->lista, nodoRemover);
+                    liberarNodo(nodoRemover);
                 }
-                liberarNodo(nodoRemover);
                 printf("Nodo removido.\n");
             } else {
                 printf("Nodo não encontrado.\n");
