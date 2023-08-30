@@ -4,7 +4,6 @@
 #define ARQUIVO 0
 #define PASTA 1
 
-
 typedef struct nodo {
     char nome[100];
     int tipo;
@@ -63,6 +62,7 @@ Nodo* deletarNodo(Nodo *nodo){
     free(nodo);
     return aux;
 }
+
 
 Nodo* buscarNodo(Nodo *nodo, char nome[]){
     Nodo *aux = nodo;
@@ -178,22 +178,17 @@ NodoVertical* inserirNodoVertical(NodoVertical* nodoVertical, Nodo* pasta) {
 }
 
 NodoVertical* deletarNodoVertical(NodoVertical* nodoVertical) {
-    while (nodoVertical->prox != NULL) {
-        nodoVertical = nodoVertical->prox;
-    }
-    
-    NodoVertical* aux = nodoVertical;
-    
-    while (aux != NULL) {
-        NodoVertical* aux2 = aux->ant;
-        if (aux->pasta != NULL) {
-            deletarLista(aux->lista);
-            deletarNodo(aux->pasta);
+    while (nodoVertical != NULL) {
+        NodoVertical* proximo = nodoVertical->prox;
+        if (nodoVertical->pasta != NULL) {
+            // Remova a pasta da lista e, em seguida, a pasta vertical
+            Nodo *nodoRemover = nodoVertical->pasta;
+            deletarLista(nodoVertical->lista); // Liberar memória da lista
+            free(nodoRemover); // Liberar memória do nodo
         }
-        free(aux);
-        aux = aux2;
+        free(nodoVertical);
+        nodoVertical = proximo;
     }
-    
     return NULL;
 }
 
@@ -209,15 +204,14 @@ NodoVertical* buscarNodoVertical(NodoVertical* nodoVertical, Nodo* pasta) {
 }
 
 void liberarNodoVertical(NodoVertical* nodoVertical) {
-    NodoVertical* aux = nodoVertical;
-    while (aux != NULL) {
-        NodoVertical* proximo = aux->prox;
-        if (aux->pasta != NULL) {
-            liberarNodo(aux->pasta);
-            liberarLista(aux->lista);
+    while (nodoVertical != NULL) {
+        NodoVertical* proximo = nodoVertical->prox;
+        if (nodoVertical->pasta != NULL) {
+            liberarLista(nodoVertical->lista); // Liberar memória da lista
+            free(nodoVertical->pasta); // Liberar memória do nodo
         }
-        free(aux);
-        aux = proximo;
+        free(nodoVertical);
+        nodoVertical = proximo;
     }
 }
 
@@ -268,12 +262,15 @@ int main(){
             if (nodo != NULL) {
                 NodoVertical* novoNodoVertical = inserirNodoVertical(atual, nodo);
                 if (novoNodoVertical != NULL) {
+                    // O problema está aqui:
+                    // A lista do novo nodo vertical não está sendo inicializada corretamente
+                    novoNodoVertical->lista = criarLista(); // Adicione esta linha
                     atual = novoNodoVertical;
                 }
             } else {
                 printf("Nodo nao encontrado\n");
             }
-        } else if (strcmp(cmd, "rm") == 0) {
+         } else if (strcmp(cmd, "rm") == 0) {
             Nodo *nodoRemover = buscarNodo(atual->lista->primeiro, par);
             if (nodoRemover != NULL) {
                 if (nodoRemover->tipo == PASTA) {
@@ -282,16 +279,15 @@ int main(){
                         nodoVertical = deletarNodoVertical(nodoVerticalRemover);
                     }
                     deletarNodoDaLista(atual->lista, nodoRemover);
-                    liberarNodo(nodoRemover);
                 } else {
                     deletarNodoDaLista(atual->lista, nodoRemover);
-                    liberarNodo(nodoRemover);
                 }
                 printf("Nodo removido.\n");
             } else {
                 printf("Nodo não encontrado.\n");
             }
         }
+        
            
         /*
         Nodo* nodo = raiz;
